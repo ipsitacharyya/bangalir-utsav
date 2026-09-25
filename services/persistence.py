@@ -31,7 +31,7 @@ def _load_project_secret_file():
     """
     if tomllib is None:
         return {}
-    path = Path(__file__).resolve().parent.parent / ".streamlit" / "secrets.toml.example"
+    path = Path(__file__).resolve().parent.parent / ".streamlit" / "secrets.toml"
     if not path.exists():
         return {}
     try:
@@ -224,6 +224,29 @@ def get_locations(limit=30):
         f"/rest/v1/live_locations?select=location&order=created_at.desc&limit={limit}",
     )
     return [x["location"] for x in response.json() if x.get("location")]
+
+
+def get_latest_location_event():
+    """Return the newest broadcast event with its timestamp for live clients."""
+    if not supabase_enabled():
+        items = local().get("locations", [])
+        if not items:
+            return None
+        item = items[-1]
+        return {
+            "location": item.get("location", ""),
+            "created_at": item.get("created_at", ""),
+        }
+
+    response = _request(
+        "GET",
+        "/rest/v1/live_locations?select=location,created_at&order=created_at.desc&limit=1",
+    )
+    rows = response.json()
+    if not rows:
+        return None
+    row = rows[0]
+    return {"location": row.get("location", ""), "created_at": row.get("created_at", "")}
 
 
 def submit_song_request(title, artist, url, location):
